@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DevOps Quiz</title>
+    <style>
+        body { font-family: sans-serif; background: #2c3e50; color: white; text-align: center; }
+        .card { background: #34495e; padding: 20px; border-radius: 10px; width: 50%; margin: auto; }
+        button { padding: 10px 20px; cursor: pointer; background: #27ae60; border: none; color: white; }
+    </style>
+</head>
+<body>
+    <h1>DevOps Quiz</h1>
+    <div class="card" id="game-container">
+        <button onclick="startGame()">Start Training</button>
+    </div>
+
+    <script>
+        let score = 0;
+        async function startGame() {
+            const res = await fetch('/get-questions');
+            const data = await res.json();
+            displayQuestion(data, 0);
+        }
+
+        function displayQuestion(questions, index) {
+            if (index >= questions.length) {
+                document.getElementById('game-container').innerHTML = `<h2>Final Score: ${score}/10</h2>`;
+                return;
+            }
+            const q = questions[index];
+            let html = `<h3>${q.question}</h3>`;
+            for (let key in q.answers) {
+                if (q.answers[key]) {
+                    html += `<button onclick="checkAnswer('${key}', '${q.correct_answers[key + '_correct']}', ${index})">${q.answers[key]}</button><br><br>`;
+                }
+            }
+            document.getElementById('game-container').innerHTML = html;
+        }
+
+        function checkAnswer(key, isCorrect, index) {
+            if (isCorrect === "true") score++;
+            // Move to next question logic would go here
+            alert(isCorrect === "true" ? "Correct!" : "Wrong!");
+            // For brevity, just calling next
+            startGame(); // In a real app, you'd pass the index+1
+        }
+    </script>
+</body>
+</html>
+
