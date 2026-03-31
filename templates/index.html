@@ -1,50 +1,243 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>DevOps Quiz</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DevOps Training Center</title>
     <style>
-        body { font-family: sans-serif; background: #2c3e50; color: white; text-align: center; }
-        .card { background: #34495e; padding: 20px; border-radius: 10px; width: 50%; margin: auto; }
-        button { padding: 10px 20px; cursor: pointer; background: #27ae60; border: none; color: white; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 15px;
+        }
+
+        .card {
+            background: #34495e;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 700px;
+            margin: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        select, button.filter-btn {
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+        }
+
+        button.filter-btn {
+            background: #2980b9;
+            color: white;
+            cursor: pointer;
+        }
+
+        button.filter-btn:hover {
+            background: #3498db;
+        }
+
+        #question-text {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        #choices-container {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .quiz-btn {
+            padding: 12px 20px;
+            cursor: pointer;
+            background: #27ae60;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: background 0.3s, transform 0.1s;
+        }
+
+        .quiz-btn:hover {
+            background: #2ecc71;
+            transform: translateY(-2px);
+        }
+
+        #score-board, #question-number, #meta-info {
+            margin-top: 15px;
+            font-size: 1rem;
+        }
+
+        #feedback {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-    <h1>DevOps Quiz</h1>
-    <div class="card" id="game-container">
-        <button onclick="startGame()">Start Training</button>
+
+    <h1>DevOps Training Center</h1>
+
+    <div class="card">
+        <div class="filters">
+            <select id="category">
+                <option value="DevOps">DevOps</option>
+                <option value="Linux">Linux</option>
+                <option value="Docker">Docker</option>
+                <option value="Kubernetes">Kubernetes</option>
+                <option value="Git">Git</option>
+                <option value="CI/CD">CI/CD</option>
+            </select>
+
+            <select id="difficulty">
+                <option value="">All Difficulties</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+            </select>
+
+            <button class="filter-btn" onclick="startNewRound()">Start Quiz</button>
+        </div>
+
+        <div id="question-number">Question 1 of 10</div>
+        <div id="meta-info">Category: DevOps | Difficulty: Mixed</div>
+        <div id="score-board">Score: 0</div>
+
+        <div id="question-text">Click "Start Quiz" to begin.</div>
+
+        <div id="choices-container"></div>
+
+        <div id="feedback"></div>
     </div>
 
     <script>
+        let questions = [];
+        let currentQuestionIndex = 0;
         let score = 0;
-        async function startGame() {
-            const res = await fetch('/get-questions');
-            const data = await res.json();
-            displayQuestion(data, 0);
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
         }
 
-        function displayQuestion(questions, index) {
-            if (index >= questions.length) {
-                document.getElementById('game-container').innerHTML = `<h2>Final Score: ${score}/10</h2>`;
+        async function loadQuiz() {
+            const category = document.getElementById("category").value;
+            const difficulty = document.getElementById("difficulty").value;
+
+            document.getElementById("question-text").innerText = "Loading question...";
+            document.getElementById("choices-container").innerHTML = "";
+            document.getElementById("feedback").innerText = "";
+
+            try {
+                const response = await fetch(`/get-questions?category=${encodeURIComponent(category)}&difficulty=${encodeURIComponent(difficulty)}`);
+                questions = await response.json();
+
+                if (Array.isArray(questions) && questions.length > 0) {
+                    currentQuestionIndex = 0;
+                    score = 0;
+                    updateScore();
+                    displayQuestion();
+                } else {
+                    document.getElementById("question-text").innerText = "No questions returned from API.";
+                }
+            } catch (error) {
+                console.error("Failed to load quiz:", error);
+                document.getElementById("question-text").innerText = "Connection Error. Check backend logs.";
+            }
+        }
+
+        function startNewRound() {
+            loadQuiz();
+        }
+
+        function updateScore() {
+            document.getElementById("score-board").innerText = `Score: ${score}`;
+        }
+
+        function displayQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                document.getElementById("question-text").innerText = `Round complete! Final Score: ${score}/10`;
+                document.getElementById("choices-container").innerHTML = "";
+                document.getElementById("feedback").innerText = "Starting a new set is one click away.";
+                document.getElementById("question-number").innerText = "Quiz Complete";
+                document.getElementById("meta-info").innerText = "Select filters and start again.";
                 return;
             }
-            const q = questions[index];
-            let html = `<h3>${q.question}</h3>`;
-            for (let key in q.answers) {
-                if (q.answers[key]) {
-                    html += `<button onclick="checkAnswer('${key}', '${q.correct_answers[key + '_correct']}', ${index})">${q.answers[key]}</button><br><br>`;
-                }
+
+            const q = questions[currentQuestionIndex];
+
+            document.getElementById("question-number").innerText = `Question ${currentQuestionIndex + 1} of ${questions.length}`;
+            document.getElementById("meta-info").innerText = `Category: ${q.category || document.getElementById("category").value} | Difficulty: ${q.difficulty || document.getElementById("difficulty").value || "Mixed"}`;
+            document.getElementById("question-text").innerText = q.text || q.question;
+            document.getElementById("feedback").innerText = "";
+
+            const container = document.getElementById("choices-container");
+            container.innerHTML = "";
+
+            if (Array.isArray(q.answers)) {
+                const validAnswers = q.answers.filter(ans => ans && ans.text);
+                const shuffledAnswers = shuffleArray([...validAnswers]);
+
+                shuffledAnswers.forEach(ans => {
+                    createButton(ans.text, ans.isCorrect);
+                });
             }
-            document.getElementById('game-container').innerHTML = html;
         }
 
-        function checkAnswer(key, isCorrect, index) {
-            if (isCorrect === "true") score++;
-            // Move to next question logic would go here
-            alert(isCorrect === "true" ? "Correct!" : "Wrong!");
-            // For brevity, just calling next
-            startGame(); // In a real app, you'd pass the index+1
+        function createButton(text, isCorrect) {
+            const btn = document.createElement("button");
+            btn.innerText = text;
+            btn.className = "quiz-btn";
+
+            btn.onclick = () => {
+                const feedback = document.getElementById("feedback");
+
+                if (isCorrect) {
+                    feedback.innerText = "Correct!";
+                    score++;
+                    updateScore();
+                } else {
+                    const currentQ = questions[currentQuestionIndex];
+                    const correctAnswer = currentQ.answers.find(a => a.isCorrect);
+                    feedback.innerText = `Wrong! Correct answer: ${correctAnswer.text}`;
+                }
+
+                currentQuestionIndex++;
+
+                setTimeout(() => {
+                    displayQuestion();
+                }, 1500);
+            };
+
+            document.getElementById("choices-container").appendChild(btn);
         }
     </script>
 </body>
 </html>
-
